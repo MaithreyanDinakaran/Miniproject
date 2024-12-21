@@ -92,27 +92,71 @@ Data Preprocessing for Consistency:
     Handles variations in image quality, lighting, and background by normalizing and enhancing the images before analysis.
 
 ## Requirements
+1. Hardware Requirements:
 
+    Computer/Laptop:
+        Minimum 4 GB RAM (8 GB or higher recommended).
+        Processor: Intel i5 or higher (or equivalent).
+        GPU: Optional but recommended for faster image processing (e.g., NVIDIA GPU for YOLO).
+    Camera or Imaging Device:
+        For capturing real-time images of fruits and vegetables.
+    Storage:
+        At least 10 GB free space for storing datasets and software.
+
+2. Software Requirements:
+
+    Python:
+        Version 3.8 or higher.
+    Python Libraries:
+        OpenCV: For image processing.
+        NumPy: For numerical computations.
+        PIL: For image handling in the GUI.
+        Tkinter: For creating the GUI application.
+        Torch: For YOLOv5 implementation.
+        skimage: For texture analysis.
+        pandas: For handling YOLO's detection output.
+    YOLOv5 Model:
+        Pretrained weights for object detection.
+    Image Dataset:
+        Labeled images of fresh and spoiled fruits/vegetables.
 
 ## System Architecture
 
 ## Output
+![0222](https://github.com/user-attachments/assets/1bb5bf57-2dff-4f4e-bcce-65ed22586413)
 
-<!--Embed the Output picture at respective places as shown below as shown below-->
-#### Output1 - Name of the output
+#### Output1 - Fresh
+![Capture1222](https://github.com/user-attachments/assets/92824283-d4a3-4bcf-8b97-174e20fc9844)
 
-#### Output2 - Name of the output
-![Screenshot 2023-11-25 134253](https://github.com/<<yourusername>>/Hand-Gesture-Recognition-System/assets/75235455/5e05c981-05ca-4aaa-aea2-d918dcf25cb7)
+#### Output2 - Fresh
+![Capture1222](https://github.com/user-attachments/assets/29bf8fd3-656d-4c78-bb65-1ead18fe665b)
 
-Detection Accuracy: 96.7%
+
+Detection Accuracy: 85.7%
 Note: These metrics can be customized based on your actual performance evaluations.
 
 
 ## Results and Impact
-<!--Give the results and impact as shown below-->
-The Sign Language Detection System enhances accessibility for individuals with hearing and speech impairments, providing a valuable tool for inclusive communication. The project's integration of computer vision and deep learning showcases its potential for intuitive and interactive human-computer interaction.
+Accurate Quality Detection:
 
-This project serves as a foundation for future developments in assistive technologies and contributes to creating a more inclusive and accessible digital environment.
+    The system can successfully analyze the quality of fruits and vegetables by detecting spoilage based on visual features like texture, color, and contrast.
+    Fresh and spoiled items are identified with a higher accuracy after refining the detection algorithm.
+
+Grading System:
+
+    The system assigns quality grades (A, B, C, D) to batches of fruits and vegetables based on the spoilage ratio, providing clear and actionable insights.
+
+Item Counting:
+
+    The program detects and counts the number of fresh and spoiled items when multiple objects are present in the uploaded image.
+
+GUI Functionality:
+
+    A user-friendly interface has been developed, enabling users to upload images and receive detailed quality analysis results in real-time.
+
+Improved Spoilage Detection:
+
+    Enhanced algorithms have resolved previous inaccuracies, such as fresh items being classified as spoiled (e.g., fresh bananas now correctly identified as fresh).
 
 ## Articles published / References
 1. N. S. Gupta, S. K. Rout, S. Barik, R. R. Kalangi, and B. Swampa, “Enhancing Heart Disease Prediction Accuracy Through Hybrid Machine Learning Methods ”, EAI Endorsed Trans IoT, vol. 10, Mar. 2024.
