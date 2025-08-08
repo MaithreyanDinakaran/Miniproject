@@ -3,6 +3,7 @@ Food Quality Analysis Using Image Processing
 
 ## About
 This project is designed to analyze the quality of food products (specifically fruits and biscuits) using image processing and machine learning techniques. It aims to provide real-time quality assessment by detecting cracks in biscuits and categorizing fruits as fresh or spoiled.
+
 Key Features:
 
     Real-Time Fruit Quality Detection:
@@ -120,6 +121,166 @@ Data Preprocessing for Consistency:
     Image Dataset:
         Labeled images of fresh and spoiled fruits/vegetables.
 
+
+## CODE
+```
+import cv2
+import numpy as np
+from tkinter import *
+from tkinter.filedialog import askopenfilename
+from PIL import Image, ImageTk
+from skimage.feature import local_binary_pattern
+import torch
+
+# Load YOLO model for fruit and vegetable detection
+yolo_model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+
+# Classes for fruits and vegetables
+FRUIT_CLASSES = ["apple", "orange", "banana", "grape"]
+VEGETABLE_CLASSES = ["carrot", "tomato", "cucumber", "potato"]
+
+# GUI Setup
+root = Tk()
+root.title("Food Quality Analyzer")
+root.geometry("1000x600")
+root.configure(bg='black')
+
+# Global variables
+uploaded_image = None
+
+# Function to preprocess the image
+def preprocess_image(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv[:, :, 2] = cv2.equalizeHist(hsv[:, :, 2])
+    return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+# Function to remove the background
+def remove_background(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, mask = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    rgba = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    rgba[:, :, 3] = mask
+    return rgba
+
+# Function to analyze spoilage areas
+def detect_spoilage_areas(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, threshold = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY_INV)
+    contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    spoilage_area = sum(cv2.contourArea(c) for c in contours)
+    total_area = image.shape[0] * image.shape[1]
+    spoilage_ratio = spoilage_area / total_area
+    return spoilage_ratio > 0.1
+
+# Updated freshness analysis function
+def analyze_freshness(image):
+    preprocessed = preprocess_image(image)
+    gray = cv2.cvtColor(preprocessed, cv2.COLOR_BGR2GRAY)
+    brightness = np.mean(gray)
+    contrast = np.std(gray)
+
+    hsv = cv2.cvtColor(preprocessed, cv2.COLOR_BGR2HSV)
+    hue_mean = np.mean(hsv[:, :, 0])
+    saturation_mean = np.mean(hsv[:, :, 1])
+    hue_variance = np.var(hsv[:, :, 0])
+
+    radius = 2
+    n_points = 8 * radius
+    lbp = local_binary_pattern(gray, n_points, radius, method="uniform")
+    lbp_hist, _ = np.histogram(lbp, bins=np.arange(0, n_points + 3), density=True)
+    texture_score = lbp_hist.var()
+
+    is_spoiled_area = detect_spoilage_areas(image)
+
+    if is_spoiled_area or hue_variance > 20 or contrast < 60 or brightness < 90 or hue_mean < 30 or saturation_mean < 60 or texture_score < 0.03:
+        return "Fresh"
+    return "Spoiled"
+
+# Function to classify grade
+def classify_grade(fresh_count, spoiled_count):
+    total = fresh_count + spoiled_count
+    if total == 0:
+        return ""
+    spoiled_ratio = spoiled_count / total
+    if spoiled_ratio <= 0.1:
+        return "A"
+    elif spoiled_ratio <= 0.3:
+        return "B"
+    elif spoiled_ratio <= 0.6:
+        return "C"
+    else:
+        return "D"
+
+# Function to detect and classify items
+def detect_and_classify(image):
+    results = yolo_model(image)
+    detections = results.pandas().xyxy[0]
+    fruit_counts = {"Fresh": 0, "Spoiled": 0}
+    vegetable_counts = {"Fresh": 0, "Spoiled": 0}
+    for _, row in detections.iterrows():
+        x1, y1, x2, y2 = int(row['xmin']), int(row['ymin']), int(row['xmax']), int(row['ymax'])
+        label = row['name'].lower()
+        item_image = image[y1:y2, x1:x2]
+        freshness = analyze_freshness(item_image)
+        if label in FRUIT_CLASSES:
+            fruit_counts[freshness] += 1
+        elif label in VEGETABLE_CLASSES:
+            vegetable_counts[freshness] += 1
+    fruit_grade = classify_grade(fruit_counts["Fresh"], fruit_counts["Spoiled"])
+    vegetable_grade = classify_grade(vegetable_counts["Fresh"], vegetable_counts["Spoiled"])
+    return fruit_counts, vegetable_counts, fruit_grade, vegetable_grade
+
+# Function to upload an image
+def upload_image():
+    global uploaded_image
+    filename = askopenfilename(filetypes=[("Image files", ".jpg;.jpeg;*.png")])
+    if filename:
+        uploaded_image = cv2.imread(filename)
+        processed_image = remove_background(uploaded_image)
+        img_resized = cv2.resize(processed_image, (400, 300))
+        display_image(img_resized)
+    else:
+        result_label.config(text="Error: No file selected.", fg="white")
+
+# Function to display the uploaded image
+def display_image(img):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA))
+    img_tk = ImageTk.PhotoImage(img_pil)
+    img_label.config(image=img_tk)
+    img_label.image = img_tk
+
+# Function to analyze the uploaded image
+def analyze_image():
+    if uploaded_image is None:
+        result_label.config(text="Error: No image uploaded.", fg="white")
+        return
+    fruit_counts, vegetable_counts, fruit_grade, vegetable_grade = detect_and_classify(uploaded_image)
+    fruit_result_label.config(text=f"Fresh Fruits: {fruit_counts['Fresh']}\nSpoiled Fruits: {fruit_counts['Spoiled']}\nFruit Grade: {fruit_grade}")
+    vegetable_result_label.config(text=f"Fresh Vegetables: {vegetable_counts['Fresh']}\nSpoiled Vegetables: {vegetable_counts['Spoiled']}\nVegetable Grade: {vegetable_grade}")
+
+# GUI Layout
+img_label = Label(root, bg="black", highlightthickness=2, highlightbackground="white")
+img_label.place(relx=0.55, rely=0.4, anchor="center")
+
+upload_button = Button(root, text="Upload Image", command=upload_image, font=("Arial", 14), bg="#4CAF50", fg="white", padx=10, pady=5)
+upload_button.place(relx=0.57, rely=0.85, anchor="center")
+
+analyze_button = Button(root, text="Analyze", command=analyze_image, font=("Arial", 14), bg="#2196F3", fg="white", padx=10, pady=5)
+analyze_button.place(relx=0.57, rely=0.7, anchor="center")
+
+fruit_result_label = Label(root, text="", font=("Helvetica", 14, "bold"), bg="black", fg="orange", justify=LEFT)
+fruit_result_label.place(relx=0.05, rely=0.35, anchor="w")
+
+vegetable_result_label = Label(root, text="", font=("Helvetica", 14, "bold"), bg="black", fg="green", justify=LEFT)
+vegetable_result_label.place(relx=0.05, rely=0.5, anchor="w")
+
+result_label = Label(root, text="", font=("Arial", 12), bg="black", fg="white")
+result_label.place(relx=0.05, rely=0.95, anchor="w")
+
+root.mainloop()
+```
 ## System Architecture
 
 ## Output
